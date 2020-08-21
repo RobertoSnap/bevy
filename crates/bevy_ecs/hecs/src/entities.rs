@@ -11,6 +11,7 @@ use std::error::Error;
 #[derive(Debug, Clone, Copy, Hash, Eq, Ord, PartialEq, PartialOrd)]
 pub struct Entity(u32);
 
+#[allow(clippy::new_without_default)]
 impl Entity {
     #[allow(missing_docs)]
     pub fn new() -> Self {
@@ -37,7 +38,6 @@ impl Entity {
 #[derive(Default)]
 pub(crate) struct Entities {
     pub entity_locations: HashMap<Entity, Location>,
-    pub current: u32,
 }
 
 impl Entities {

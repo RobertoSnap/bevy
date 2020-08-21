@@ -7,7 +7,9 @@ use crate::{
 use bevy_asset::Handle;
 use bevy_ecs::{Query, Res, ResMut};
 use bevy_property::Properties;
+
 #[derive(Properties, Default, Clone)]
+#[non_exhaustive]
 pub struct RenderPipeline {
     pub pipeline: Handle<PipelineDescriptor>,
     pub specialization: PipelineSpecialization,
@@ -28,7 +30,6 @@ impl RenderPipeline {
         RenderPipeline {
             pipeline,
             specialization,
-            ..Default::default()
         }
     }
 }
@@ -77,6 +78,9 @@ pub fn draw_render_pipelines_system(
     mut query: Query<(&mut Draw, &mut RenderPipelines)>,
 ) {
     for (mut draw, mut render_pipelines) in &mut query.iter() {
+        if !draw.is_visible {
+            continue;
+        }
         let render_pipelines = &mut *render_pipelines;
         for pipeline in render_pipelines.pipelines.iter_mut() {
             pipeline.specialization.sample_count = msaa.samples;

@@ -47,6 +47,9 @@ pub trait Fetch<'a>: Sized {
     fn release(archetype: &Archetype);
 
     /// if this returns true, the current item will be skipped during iteration
+    ///
+    /// # Safety
+    /// shouldn't be called if there is no current item
     unsafe fn should_skip(&self) -> bool {
         false
     }
@@ -179,6 +182,12 @@ impl<'a, T: Component> DerefMut for Mut<'a, T> {
     fn deref_mut(&mut self) -> &mut T {
         *self.mutated = true;
         self.value
+    }
+}
+
+impl<'a, T: Component + core::fmt::Debug> core::fmt::Debug for Mut<'a, T> {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        self.value.fmt(f)
     }
 }
 
@@ -787,7 +796,7 @@ struct ChunkIter<Q: Query> {
 }
 
 impl<Q: Query> ChunkIter<Q> {
-    unsafe fn next<'a, 'w>(&mut self) -> Option<<Q::Fetch as Fetch<'a>>::Item> {
+    unsafe fn next<'a>(&mut self) -> Option<<Q::Fetch as Fetch<'a>>::Item> {
         loop {
             if self.len == 0 {
                 return None;

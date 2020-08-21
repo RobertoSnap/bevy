@@ -1,6 +1,6 @@
 use crate::Input;
 use bevy_app::prelude::*;
-use bevy_ecs::{Res, ResMut, Local};
+use bevy_ecs::{Local, Res, ResMut};
 
 /// A key input event from a keyboard device
 #[derive(Debug, Clone)]
@@ -19,10 +19,7 @@ pub enum ElementState {
 
 impl ElementState {
     pub fn is_pressed(&self) -> bool {
-        match self {
-            ElementState::Pressed => true,
-            _ => false,
-        }
+        matches!(self, ElementState::Pressed)
     }
 }
 

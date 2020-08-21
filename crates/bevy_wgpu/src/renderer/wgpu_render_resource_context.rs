@@ -5,7 +5,9 @@ use crate::{
 
 use bevy_asset::{Assets, Handle, HandleUntyped};
 use bevy_render::{
-    pipeline::{BindGroupDescriptor, BindGroupDescriptorId, PipelineDescriptor},
+    pipeline::{
+        BindGroupDescriptor, BindGroupDescriptorId, BindingShaderStage, PipelineDescriptor,
+    },
     renderer::{
         BindGroup, BufferId, BufferInfo, RenderResourceBinding, RenderResourceContext,
         RenderResourceId, SamplerId, TextureId,
@@ -57,6 +59,7 @@ impl WgpuRenderResourceContext {
         );
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub fn copy_buffer_to_texture(
         &self,
         command_encoder: &mut wgpu::CommandEncoder,
@@ -113,9 +116,20 @@ impl WgpuRenderResourceContext {
             .bindings
             .iter()
             .map(|binding| {
+                let shader_stage = if binding.shader_stage
+                    == BindingShaderStage::VERTEX | BindingShaderStage::FRAGMENT
+                {
+                    wgpu::ShaderStage::VERTEX | wgpu::ShaderStage::FRAGMENT
+                } else if binding.shader_stage == BindingShaderStage::VERTEX {
+                    wgpu::ShaderStage::VERTEX
+                } else if binding.shader_stage == BindingShaderStage::FRAGMENT {
+                    wgpu::ShaderStage::FRAGMENT
+                } else {
+                    panic!("Invalid binding shader stage.")
+                };
                 wgpu::BindGroupLayoutEntry::new(
                     binding.index,
-                    wgpu::ShaderStage::VERTEX | wgpu::ShaderStage::FRAGMENT,
+                    shader_stage,
                     (&binding.bind_type).wgpu_into(),
                 )
             })
@@ -453,7 +467,7 @@ impl RenderResourceContext for WgpuRenderResourceContext {
                         RenderResourceBinding::Texture(resource) => {
                             let texture_view = texture_views
                                 .get(&resource)
-                                .expect(&format!("{:?}", resource));
+                                .unwrap_or_else(|| panic!("{:?}", resource));
                             wgpu::BindingResource::TextureView(texture_view)
                         }
                         RenderResourceBinding::Sampler(resource) => {
@@ -482,7 +496,7 @@ impl RenderResourceContext for WgpuRenderResourceContext {
 
             let bind_group_info = bind_groups
                 .entry(bind_group_descriptor_id)
-                .or_insert_with(|| WgpuBindGroupInfo::default());
+                .or_insert_with(WgpuBindGroupInfo::default);
             bind_group_info
                 .bind_groups
                 .insert(bind_group.id, wgpu_bind_group);
@@ -527,7 +541,7 @@ impl RenderResourceContext for WgpuRenderResourceContext {
         let buffer_slice = buffer.slice(..);
         let data = buffer_slice.map_async(wgpu::MapMode::Write);
         self.device.poll(wgpu::Maintain::Wait);
-        if let Err(_) = pollster::block_on(data) {
+        if pollster::block_on(data).is_err() {
             panic!("failed to map buffer to host");
         }
     }
